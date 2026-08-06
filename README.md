@@ -13,7 +13,8 @@ Advanced server organization system for the admin dashboard with folder manageme
 
 ## Installation
 
-1. Download the plugin ZIP file from the [Releases](https://github.com/Olivier-D-Pelican-Plugins/Enhanced-Server-Sorter/releases) page
+1. Download the plugin ZIP file from
+   the [Releases](https://github.com/Olivier-D-Pelican-Plugins/Enhanced-Server-Sorter/releases) page
 2. Go to your Pelican Panel admin area
 3. Navigate to the Plugins page
 4. Click on "Import file"
@@ -23,6 +24,7 @@ Advanced server organization system for the admin dashboard with folder manageme
 ## Usage
 
 After installation, access the folder management interface from the admin panel to:
+
 - Create and organize server folders
 - Assign servers to specific folders
 - Set up default folder rules for automatic categorization
