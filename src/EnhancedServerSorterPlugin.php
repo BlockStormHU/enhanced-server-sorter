@@ -406,6 +406,13 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
         ];
     }
 
+    public function getSettingsFormData(): array
+    {
+        return [
+            'default_folders' => $this->loadDefaultFolders(),
+        ];
+    }
+
     protected function loadDefaultFolders(): array
     {
         try {
