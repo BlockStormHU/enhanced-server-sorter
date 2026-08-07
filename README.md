@@ -1,15 +1,27 @@
 # Enhanced Server Sorter
 
-Advanced server organization system for the admin dashboard with folder management and server assignment.
+Advanced server organization system for the Pelican Panel with folder management, server assignment and
+folder-aware sorting across the client area.
 
 ## Features
 
-- Create custom folders to organize servers in the admin dashboard
-- Drag-and-drop server assignment to folders
-- Default folders system for automatic server categorization
-- Lock/unlock folders to prevent accidental modifications
-- Search and filter servers within folders
-- Bulk operations support
+- Create custom folders to organize your servers, managed per user from the "Manage Folders" button on the server
+  list
+- Assign servers to folders with a searchable multi-select, with folders reorderable using the up/down buttons
+- Folder order and the position of a server inside its folder define the sorting everywhere in the panel
+- Server list grouped by folder, with collapsible groups and an "Unassigned" group for servers without a folder
+- Server switcher dropdown ordered by folder, so the switcher matches the order of the server list
+- The server you are currently on is shown as disabled in the switcher dropdown
+- Default folders system for automatic server categorization, configured by admins in the plugin settings
+- Default folders are pushed to every existing user as soon as the settings are saved, and re-synced for a user
+  when they open their folder manager
+- Lock/unlock default folders to prevent users from changing their contents
+- Duplicate protection: a server can only live in one folder, and an explicit warning is shown if the same server
+  is assigned twice
+- Only servers the user actually has access to can be assigned or kept in a folder
+- Fully translatable interface through the plugin language files
+- Safe fallback behaviour: if the plugin migrations have not run yet, the panel keeps working and a message
+  explains what is missing
 
 ## Installation
 
@@ -23,12 +35,26 @@ Advanced server organization system for the admin dashboard with folder manageme
 
 ## Usage
 
-After installation, access the folder management interface from the admin panel to:
+### As a user
 
-- Create and organize server folders
+Open the server list and use the "Manage Folders" button to:
+
+- Create and organize your server folders
 - Assign servers to specific folders
-- Set up default folder rules for automatic categorization
-- Lock important folders to prevent changes
+- Reorder folders to control how servers are grouped and sorted, both in the server list and in the server
+  switcher
+- Collapse or expand folder groups on the server list
+
+Folders that were locked by an administrator are shown but their server list cannot be edited.
+
+### As an administrator
+
+Open the plugin settings from the Plugins page to:
+
+- Set up default folders for automatic categorization
+- Pre-assign servers to those default folders
+- Lock important folders to prevent users from changing them
+- Reorder default folders to define the order every user starts with
 
 ## Requirements
 
@@ -36,4 +62,4 @@ After installation, access the folder management interface from the admin panel 
 
 ## Author
 
-Made by **olivierdti** maintained by Pelican Plugins Community
+Made by **olivierdti** maintained by Pelican Plugins Community & StormSolutions
