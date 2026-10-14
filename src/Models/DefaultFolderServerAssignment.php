@@ -16,6 +16,12 @@ class DefaultFolderServerAssignment extends Model
         'position',
     ];
 
+    protected $casts = [
+        'default_folder_id' => 'integer',
+        'server_id' => 'integer',
+        'position' => 'integer',
+    ];
+
     public function defaultFolder(): BelongsTo
     {
         return $this->belongsTo(DefaultFolder::class, 'default_folder_id');
@@ -26,4 +32,3 @@ class DefaultFolderServerAssignment extends Model
         return $this->belongsTo(Server::class, 'server_id');
     }
 }
-

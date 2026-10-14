@@ -25,4 +25,3 @@ class DefaultFolder extends Model
         return $this->hasMany(DefaultFolderServerAssignment::class, 'default_folder_id');
     }
 }
-
