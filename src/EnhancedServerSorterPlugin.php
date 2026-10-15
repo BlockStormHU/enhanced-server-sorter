@@ -12,19 +12,20 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Panel;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
-use Olivier\EnhancedServerSorter\Models\DefaultFolder;
-use Olivier\EnhancedServerSorter\Models\DefaultFolderServerAssignment;
-use Olivier\EnhancedServerSorter\Models\ServerFolder;
-use Olivier\EnhancedServerSorter\Models\ServerFolderAssignment;
-use Olivier\EnhancedServerSorter\Providers\EnhancedServerSorterServiceProvider;
+use Filament\Schemas\Components\Utilities\Get;
+use Olivier\EnhancedServerSorter\Services\FolderService;
+use Throwable;
 
 class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
 {
-    private static bool $providerRegistered = false;
+    public function getId(): string
+    {
+        return 'enhanced-server-sorter';
+    }
 
     public function register(Panel $panel): void
     {
@@ -32,15 +33,14 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
             return;
         }
 
-        ListServers::registerCustomHeaderActions(
-            HeaderActionPosition::After,
-            $this->makeManageFoldersAction()
-        );
+        ListServers::registerCustomHeaderActions(HeaderActionPosition::After, $this->makeManageFoldersAction());
     }
 
-    public function getId(): string
+    public function boot(Panel $panel): void {}
+
+    private function folders(): FolderService
     {
-        return 'enhanced-server-sorter';
+        return app(FolderService::class);
     }
 
     private function makeManageFoldersAction(): Action
@@ -56,12 +56,28 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                 if (!Schema::hasTable('enhanced_server_folders')) {
                     return [
                         \Filament\Forms\Components\Placeholder::make('migration_required')
-                            ->label(fn() => trans('enhanced-server-sorter::messages.migration_required'))
-                            ->content(fn() => trans('enhanced-server-sorter::messages.migration_required_message'))
+            ->fillForm(function () {
+                $user = user();
+
+                if (!$user || !$this->folders()->isReady()) {
+                    return [];
+                }
+
+                $serverIds = $user->accessibleServers()->pluck('id')->all();
+
+                return ['folders' => $this->folders()->foldersForUser($user->id, $serverIds)];
+            })
+            ->schema(function () {
+                if (!$this->folders()->isReady()) {
+                    return [
+                        TextEntry::make('migration_required')
+                            ->label(fn () => trans('enhanced-server-sorter::messages.migration_required'))
+                            ->state(fn () => trans('enhanced-server-sorter::messages.migration_required_message')),
                     ];
                 }
 
-                $servers = user()?->accessibleServers()?->pluck('name', 'id') ?? collect();
+                $servers = (user()?->accessibleServers()->pluck('name', 'id') ?? collect())
+                    ->sort(SORT_NATURAL | SORT_FLAG_CASE);
 
                 return [
                     Repeater::make('folders')
@@ -73,7 +89,8 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                             TextInput::make('name')
                                 ->label(fn() => trans('enhanced-server-sorter::messages.folder_name'))
                                 ->required()
-                                ->maxLength(255),
+                                ->maxLength(255)
+                                ->readOnly(fn (Get $get) => $get('id') && $this->folders()->isFolderLocked($get('name'))),
                             Select::make('server_ids')
                                 ->label(fn() => trans('enhanced-server-sorter::messages.servers'))
                                 ->multiple()
@@ -81,12 +98,13 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                                 ->searchable()
                                 ->preload()
                                 ->live()
-                                ->disabled(fn($get) => $this->isFolderLocked($get('name')))
-                                ->helperText(fn($get) => $this->isFolderLocked($get('name'))
+                                ->disabled(fn (Get $get) => $get('id') && $this->folders()->isFolderLocked($get('name')))
+                                ->helperText(fn (Get $get) => $get('id') && $this->folders()->isFolderLocked($get('name'))
                                     ? trans('enhanced-server-sorter::messages.folder_locked')
                                     : null)
                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
                         ])
+                        ->itemLabel(fn (array $state) => $state['name'] ?? null)
                         ->collapsed()
                         ->reorderableWithButtons()
                         ->addActionLabel(fn() => trans('enhanced-server-sorter::messages.add_folder')),
@@ -95,28 +113,21 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
             ->action(function (array $data) {
                 $user = user();
 
-                if (!$user) {
+                if (!$user || !$this->folders()->isReady()) {
                     return;
                 }
 
-                $folders = collect($data['folders'] ?? []);
+                $folders = $data['folders'] ?? [];
 
-                $allServerIds = [];
-                $duplicates = [];
+                $duplicates = collect($folders)
+                    ->flatMap(fn (array $folder) => $folder['server_ids'] ?? [])
+                    ->duplicates()
+                    ->unique()
+                    ->all();
 
-                foreach ($folders as $folder) {
-                    $serverIds = $folder['server_ids'] ?? [];
-                    foreach ($serverIds as $serverId) {
-                        if (in_array($serverId, $allServerIds)) {
-                            $duplicates[] = $serverId;
-                        }
-                        $allServerIds[] = $serverId;
-                    }
-                }
-
-                if (!empty($duplicates)) {
-                    $serverNames = user()?->accessibleServers()
-                        ->whereIn('servers.id', array_unique($duplicates))
+                if ($duplicates !== []) {
+                    $serverNames = $user->accessibleServers()
+                        ->whereIn('servers.id', $duplicates)
                         ->pluck('name')
                         ->join(', ');
 
@@ -129,7 +140,7 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                     return;
                 }
 
-                $this->persistFolders($folders, $user->id);
+                $this->folders()->saveUserFolders($user->id, $folders, $user->accessibleServers()->pluck('id')->all());
 
                 Notification::make()
                     ->title(trans('enhanced-server-sorter::messages.folders_updated'))
@@ -138,246 +149,10 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
             });
     }
 
-    private function loadFolders(): array
-    {
-        $user = user();
-
-        if (!$user) {
-            return [];
-        }
-
-        if (!Schema::hasTable('enhanced_server_folders')) {
-            return [];
-        }
-
-        try {
-            $this->syncDefaultFoldersForUser($user->id);
-            $lockedFolderNames = $this->getLockedFolderNames();
-
-            return ServerFolder::query()
-                ->with('assignments')
-                ->where('user_id', $user->id)
-                ->orderBy('sort')
-                ->get()
-                ->map(fn(ServerFolder $folder) => [
-                    'id' => $folder->id,
-                    'name' => $folder->name,
-                    'server_ids' => $folder->assignments->pluck('server_id')->all(),
-                    'is_locked' => in_array($folder->name, $lockedFolderNames),
-                ])
-                ->all();
-        } catch (\Exception $e) {
-            return [];
-        }
-    }
-
-    public function syncDefaultFoldersForUser(int $userId): void
-    {
-        try {
-            if (!Schema::hasTable('enhanced_server_default_folders') || !Schema::hasTable('enhanced_server_folders')) {
-                return;
-            }
-
-            $defaultFolders = DefaultFolder::query()
-                ->with('serverAssignments')
-                ->orderBy('sort')
-                ->get();
-
-            foreach ($defaultFolders as $index => $defaultFolder) {
-                $folder = ServerFolder::query()
-                    ->where('user_id', $userId)
-                    ->where('name', $defaultFolder->name)
-                    ->first();
-
-                if (!$folder) {
-                    $folder = new ServerFolder([
-                        'user_id' => $userId,
-                        'name' => $defaultFolder->name,
-                        'sort' => $defaultFolder->sort,
-                    ]);
-                    $folder->save();
-                } else {
-                    $folder->sort = $defaultFolder->sort;
-                    $folder->save();
-                }
-
-                $serverIds = $defaultFolder->serverAssignments
-                    ->sortBy('position')
-                    ->pluck('server_id')
-                    ->all();
-
-                if (!empty($serverIds)) {
-                    ServerFolderAssignment::query()
-                        ->where('folder_id', $folder->id)
-                        ->where('user_id', $userId)
-                        ->delete();
-
-                    $rows = [];
-                    foreach ($serverIds as $position => $serverId) {
-                        $rows[] = [
-                            'folder_id' => $folder->id,
-                            'server_id' => $serverId,
-                            'user_id' => $userId,
-                            'position' => $position,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }
-                    ServerFolderAssignment::query()->insert($rows);
-                }
-            }
-        } catch (\Exception $e) {
-        }
-    }
-
-    private function getLockedFolderNames(): array
-    {
-        try {
-            if (!Schema::hasTable('enhanced_server_default_folders')) {
-                return [];
-            }
-
-            return DefaultFolder::query()
-                ->where('is_locked', true)
-                ->pluck('name')
-                ->all();
-        } catch (\Exception $e) {
-            return [];
-        }
-    }
-
-    private function isFolderLocked(?string $folderName): bool
-    {
-        if (!$folderName) {
-            return false;
-        }
-
-        $lockedFolderNames = $this->getLockedFolderNames();
-        return in_array($folderName, $lockedFolderNames);
-    }
-
-    private function persistFolders(Collection $folders, int $userId): void
-    {
-        if (!Schema::hasTable('enhanced_server_folders')) {
-            return;
-        }
-
-        $accessibleServerIds = user()?->accessibleServers()?->pluck('id')->all() ?? [];
-        $existingIds = [];
-        $lockedFolderNames = $this->getLockedFolderNames();
-
-        foreach ($folders as $index => $folderData) {
-            $folder = isset($folderData['id'])
-                ? ServerFolder::query()
-                    ->where('user_id', $userId)
-                    ->whereKey($folderData['id'])
-                    ->first()
-                : null;
-
-            if (!$folder) {
-                $folder = new ServerFolder(['user_id' => $userId]);
-            }
-
-            $folderName = $folderData['name'] ?? 'Folder';
-            $isLocked = in_array($folderName, $lockedFolderNames);
-
-            $folder->name = $folderName;
-            $folder->sort = ($index * 10);
-            $folder->save();
-
-            $existingIds[] = $folder->id;
-
-            if ($isLocked) {
-                $defaultFolder = DefaultFolder::query()
-                    ->where('name', $folderName)
-                    ->where('is_locked', true)
-                    ->with('serverAssignments')
-                    ->first();
-
-                if ($defaultFolder) {
-                    $serverIds = $defaultFolder->serverAssignments
-                        ->sortBy('position')
-                        ->pluck('server_id')
-                        ->intersect($accessibleServerIds)
-                        ->values()
-                        ->all();
-                } else {
-                    $serverIds = [];
-                }
-            } else {
-                $serverIds = collect($folderData['server_ids'] ?? [])
-                    ->unique()
-                    ->intersect($accessibleServerIds)
-                    ->values()
-                    ->all();
-            }
-
-            $this->syncAssignments($folder, $serverIds, $userId);
-        }
-
-        ServerFolder::query()
-            ->where('user_id', $userId)
-            ->whereNotIn('id', $existingIds)
-            ->whereNotIn('name', $lockedFolderNames)
-            ->each(fn(ServerFolder $folder) => $folder->delete());
-    }
-
-    private function syncAssignments(ServerFolder $folder, array $serverIds, int $userId): void
-    {
-        if (!Schema::hasTable('enhanced_server_folder_server')) {
-            return;
-        }
-
-        ServerFolderAssignment::query()
-            ->where('folder_id', $folder->id)
-            ->where('user_id', $userId)
-            ->delete();
-
-        if (empty($serverIds)) {
-            return;
-        }
-
-        $rows = [];
-
-        foreach ($serverIds as $position => $serverId) {
-            $rows[] = [
-                'folder_id' => $folder->id,
-                'server_id' => $serverId,
-                'user_id' => $userId,
-                'position' => $position,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        ServerFolderAssignment::query()->insert($rows);
-    }
-
-    public function boot(Panel $panel): void
-    {
-        //
-    }
-
-    public function getServiceProviders(): array
-    {
-        return [
-            EnhancedServerSorterServiceProvider::class,
-        ];
-    }
-
     public function getSettingsForm(): array
     {
-        try {
-            $servers = Server::query()->pluck('name', 'id')->all();
-        } catch (\Exception $e) {
-            $servers = [];
-        }
-
         return [
             Repeater::make('default_folders')
-                ->label(fn() => trans('enhanced-server-sorter::messages.default_folders'))
-                ->helperText(fn() => trans('enhanced-server-sorter::messages.default_folders_help'))
-                ->default(fn() => $this->loadDefaultFolders())
                 ->schema([
                     Hidden::make('id'),
                     TextInput::make('name')
@@ -387,17 +162,18 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                     Select::make('server_ids')
                         ->label(fn() => trans('enhanced-server-sorter::messages.servers'))
                         ->multiple()
-                        ->options($servers)
+                        ->options(fn () => Server::query()->orderBy('name')->pluck('name', 'id'))
                         ->searchable()
                         ->preload()
                         ->helperText(fn() => trans('enhanced-server-sorter::messages.select_servers_help'))
                         ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
-                    \Filament\Forms\Components\Toggle::make('is_locked')
-                        ->label(fn() => trans('enhanced-server-sorter::messages.lock_folder'))
-                        ->helperText(fn() => trans('enhanced-server-sorter::messages.lock_folder_help'))
+                    Toggle::make('is_locked')
+                        ->label(fn () => trans('enhanced-server-sorter::messages.lock_folder'))
+                        ->helperText(fn () => trans('enhanced-server-sorter::messages.lock_folder_help'))
                         ->default(false)
                         ->inline(false),
                 ])
+                ->itemLabel(fn (array $state) => $state['name'] ?? null)
                 ->collapsible()
                 ->collapsed()
                 ->reorderableWithButtons()
@@ -429,87 +205,27 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
         }
     }
 
-    public function getSettingsFormData(): array
-    {
-        return [
-            'default_folders' => $this->loadDefaultFolders(),
+            'default_folders' => $this->folders()->defaultFoldersFormData(),
         ];
     }
 
     public function saveSettings(array $data): void
     {
         try {
-            if (Schema::hasTable('enhanced_server_default_folder_servers')) {
-                DefaultFolderServerAssignment::query()->delete();
-            }
-            if (Schema::hasTable('enhanced_server_default_folders')) {
-                DefaultFolder::query()->delete();
-            }
-
-            $folders = collect($data['default_folders'] ?? []);
-
-            foreach ($folders as $index => $folderData) {
-                $folder = new DefaultFolder();
-                $folder->name = $folderData['name'] ?? 'Folder';
-                $folder->sort = ($index * 10);
-                $folder->is_locked = $folderData['is_locked'] ?? false;
-                $folder->save();
-
-                $serverIds = collect($folderData['server_ids'] ?? [])
-                    ->unique()
-                    ->values()
-                    ->all();
-
-                if (!empty($serverIds)) {
-                    $rows = [];
-                    foreach ($serverIds as $position => $serverId) {
-                        $rows[] = [
-                            'default_folder_id' => $folder->id,
-                            'server_id' => $serverId,
-                            'position' => $position,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }
-                    DefaultFolderServerAssignment::query()->insert($rows);
-                }
-            }
-
-            $this->syncDefaultFoldersForAllUsers();
+            $this->folders()->saveDefaultFolders($data['default_folders'] ?? []);
 
             Notification::make()
                 ->title(trans('enhanced-server-sorter::messages.default_folders_saved'))
                 ->success()
                 ->send();
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
+            report($exception);
+
             Notification::make()
                 ->title(trans('enhanced-server-sorter::messages.error_saving'))
-                ->body($e->getMessage())
+                ->body($exception->getMessage())
                 ->danger()
                 ->send();
         }
     }
-
-    public function syncDefaultFoldersForAllUsers(): void
-    {
-        try {
-            if (!Schema::hasTable('enhanced_server_default_folders')) {
-                return;
-            }
-
-            $userModelClass = config('panel.auth.models.user', \App\Models\User::class);
-
-            if (!class_exists($userModelClass)) {
-                return;
-            }
-
-            $users = $userModelClass::query()->get();
-
-            foreach ($users as $user) {
-                $this->syncDefaultFoldersForUser($user->id);
-            }
-        } catch (\Exception $e) {
-        }
-    }
-
 }

@@ -17,6 +17,13 @@ class ServerFolderAssignment extends Model
         'position',
     ];
 
+    protected $casts = [
+        'folder_id' => 'integer',
+        'server_id' => 'integer',
+        'user_id' => 'integer',
+        'position' => 'integer',
+    ];
+
     public function folder(): BelongsTo
     {
         return $this->belongsTo(ServerFolder::class, 'folder_id');

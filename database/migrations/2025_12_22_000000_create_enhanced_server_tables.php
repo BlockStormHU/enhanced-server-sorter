@@ -22,7 +22,7 @@ return new class extends Migration {
         if (!Schema::hasTable('enhanced_server_folder_server')) {
             Schema::create('enhanced_server_folder_server', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedInteger('folder_id');
+                $table->unsignedBigInteger('folder_id');
                 $table->unsignedInteger('user_id');
                 $table->unsignedInteger('server_id');
                 $table->integer('position')->default(0);
@@ -41,4 +41,3 @@ return new class extends Migration {
         Schema::dropIfExists('enhanced_server_folders');
     }
 };
-

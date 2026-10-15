@@ -1,4 +1,4 @@
-name: enhanced-server-sorter
+name: Release
 
 on:
   release:
@@ -13,101 +13,99 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   package:
     runs-on: ubuntu-latest
     env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+      REPOSITORY: ${{ github.repository }}
     steps:
-      - name: Checkout default branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEFAULT_BRANCH }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Resolve release version
+      - name: Resolve version
         id: release
         run: |
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Resolved tag: $TAG"
-          echo "Resolved version: $VERSION"
-
-      - name: Update plugin.json and update.json
-        run: |
-          REPO="${{ github.repository }}"
-          TAG="${{ steps.release.outputs.tag }}"
-          VERSION="${{ steps.release.outputs.version }}"
-          DOWNLOAD_URL="https://github.com/$REPO/releases/download/$TAG/enhanced-server-sorter.zip"
-
-          jq --arg version "$VERSION" '.version = $version' plugin.json > plugin.json.tmp
-          mv plugin.json.tmp plugin.json
-
-          cat > update.json << EOF
-          {
-            "*": {
-              "version": "$VERSION",
-              "download_url": "$DOWNLOAD_URL"
-            }
-          }
-          EOF
-
-      - name: Commit and push metadata to default branch
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add plugin.json update.json
-
-          if git diff --staged --quiet; then
-            echo "No metadata changes to commit"
-          else
-            git commit -m "Update release metadata to version ${{ steps.release.outputs.version }}"
-            git pull --rebase origin "${DEFAULT_BRANCH}"
-            git push origin "HEAD:${DEFAULT_BRANCH}"
+          if [[ ! "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a version (expected e.g. v1.4.0 or 1.4.0-beta)"
+            exit 1
           fi
 
-      - name: Verify default branch versions before packaging
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "update_url=https://raw.githubusercontent.com/$REPOSITORY/$DEFAULT_BRANCH/update.json" >> "$GITHUB_OUTPUT"
+          echo "download_url=https://github.com/$REPOSITORY/releases/download/$TAG/enhanced-server-sorter.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          path: enhanced-server-sorter
+          persist-credentials: false
+
+      - name: Checkout default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          path: metadata
+
+      - name: Build plugin zip
+        id: zip
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          UPDATE_URL: ${{ steps.release.outputs.update_url }}
         run: |
-          VERSION="${{ steps.release.outputs.version }}"
-          git fetch origin "${DEFAULT_BRANCH}"
+          cd enhanced-server-sorter
+          jq --arg version "$VERSION" --arg update_url "$UPDATE_URL" \
+            '.version = $version | .update_url = $update_url' plugin.json > plugin.json.tmp
+          mv plugin.json.tmp plugin.json
+          rm -rf .git .github .idea dist CLAUDE.md
+          cd ..
 
-          MAIN_PLUGIN_VERSION="$(git show "origin/${DEFAULT_BRANCH}:plugin.json" | jq -r '.version')"
-          MAIN_UPDATE_VERSION="$(git show "origin/${DEFAULT_BRANCH}:update.json" | jq -r '.["*"].version')"
+          zip -qr enhanced-server-sorter.zip enhanced-server-sorter
+          unzip -l enhanced-server-sorter.zip
+          echo "sha256=$(sha256sum enhanced-server-sorter.zip | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
-          echo "main plugin.json version: $MAIN_PLUGIN_VERSION"
-          echo "main update.json version: $MAIN_UPDATE_VERSION"
-
-          test "$MAIN_PLUGIN_VERSION" = "$VERSION"
-          test "$MAIN_UPDATE_VERSION" = "$VERSION"
-
-      - name: Reset workspace to updated default branch
-        run: |
-          git checkout "${DEFAULT_BRANCH}"
-          git reset --hard "origin/${DEFAULT_BRANCH}"
-
-      - name: Create enhanced-server-sorter directory structure
-        run: |
-          mkdir -p enhanced-server-sorter
-          rsync -av --exclude='.git' --exclude='enhanced-server-sorter' ./ enhanced-server-sorter/
-
-      - name: Create zip archive
-        run: zip -r enhanced-server-sorter.zip enhanced-server-sorter/
-
-      - name: Verify package archive
-        run: ls -lah enhanced-server-sorter.zip
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
         with:
           name: enhanced-server-sorter
           path: enhanced-server-sorter.zip
 
-      - name: Upload zip to GitHub Release
+      - name: Attach zip to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$TAG" enhanced-server-sorter.zip --repo "$REPOSITORY" --clobber
+
+      - name: Commit release metadata
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          UPDATE_URL: ${{ steps.release.outputs.update_url }}
+          DOWNLOAD_URL: ${{ steps.release.outputs.download_url }}
+          SHA256: ${{ steps.zip.outputs.sha256 }}
         run: |
-          gh --version
-          gh release upload "${{ steps.release.outputs.tag }}" enhanced-server-sorter.zip --repo "${{ github.repository }}" --clobber
+          cd metadata
+          jq --arg version "$VERSION" --arg update_url "$UPDATE_URL" \
+            '.version = $version | .update_url = $update_url' plugin.json > plugin.json.tmp
+          mv plugin.json.tmp plugin.json
+          jq -n --arg version "$VERSION" --arg url "$DOWNLOAD_URL" --arg sha256 "$SHA256" \
+            '{"*": {version: $version, download_url: $url, sha256: $sha256}}' > update.json
+          cat update.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add plugin.json update.json
+
+          if git diff --staged --quiet; then
+            echo "Metadata already up to date"
+            exit 0
+          fi
+
+          git commit -m "Update release metadata to version $VERSION"
+          for attempt in 1 2 3; do
+            git pull --rebase origin "$DEFAULT_BRANCH" && git push origin "HEAD:$DEFAULT_BRANCH" && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1

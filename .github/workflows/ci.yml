@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: none
+
+      - name: Lint PHP
+        run: find src database lang -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Validate plugin.json and update.json
+        run: |
+          jq -e '
+            .id == "enhanced-server-sorter"
+            and (.name | type == "string")
+            and (.namespace | type == "string")
+            and (.class | type == "string")
+            and (.version | type == "string")
+            and (.api_version == 1)
+          ' plugin.json > /dev/null
+          jq -e '."*".version and ."*".download_url' update.json > /dev/null
+
+          PLUGIN_VERSION="$(jq -r .version plugin.json)"
+          UPDATE_VERSION="$(jq -r '."*".version' update.json)"
+          if [ "$PLUGIN_VERSION" != "$UPDATE_VERSION" ]; then
+            echo "::error file=update.json::update.json version $UPDATE_VERSION does not match plugin.json version $PLUGIN_VERSION"
+            exit 1
+          fi
+
+      - name: Check translation keys
+        run: |
+          php <<'PHP'
+          <?php
+          $base = array_keys(require 'lang/en/messages.php');
+          $failed = false;
+          foreach (glob('lang/*/messages.php') as $file) {
+              $keys = array_keys(require $file);
+              $missing = array_diff($base, $keys);
+              $extra = array_diff($keys, $base);
+              if ($missing || $extra) {
+                  $failed = true;
+                  echo "::error file=$file::missing: " . implode(', ', $missing) . '; extra: ' . implode(', ', $extra) . PHP_EOL;
+              }
+          }
+          exit($failed ? 1 : 0);
+          PHP

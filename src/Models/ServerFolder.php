@@ -2,6 +2,7 @@
 
 namespace Olivier\EnhancedServerSorter\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,11 @@ class ServerFolder extends Model
         'sort',
     ];
 
+    protected $casts = [
+        'user_id' => 'integer',
+        'sort' => 'integer',
+    ];
+
     public function assignments(): HasMany
     {
         return $this->hasMany(ServerFolderAssignment::class, 'folder_id');
@@ -23,6 +29,6 @@ class ServerFolder extends Model
 
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(config('panel.auth.models.user'), 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
