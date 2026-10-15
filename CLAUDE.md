@@ -11,7 +11,7 @@ and helpers like `user()` and `plugin_path()` come from the host panel. To try a
 into a Pelican install's `plugins/enhanced-server-sorter` directory, or zip it and import it from the admin Plugins page.
 
 `plugin.json` is the plugin manifest (namespace `Olivier\EnhancedServerSorter`, entry class `EnhancedServerSorterPlugin`,
-panels `admin`/`app`/`server`, `api_version` 1). Leave `panel_version` null: Pelican compares it with
+panels `admin`/`app`, `api_version` 1). Leave `panel_version` null: Pelican compares it with
 `version_compare`, so `^1.0.0` would reject 1.0.0-rc.1. Target platform: Pelican 1.0 (Filament 5, Laravel 13, PHP 8.4).
 
 To run the plugin for real, use a Pelican checkout with `composer install` and a SQLite, MySQL, MariaDB or PostgreSQL
@@ -37,6 +37,12 @@ fields, checks that `plugin.json` and `update.json` have the same version, and c
 
 So don't bump `plugin.json`/`update.json` by hand for a release; publishing the release does it. `dist/` and `*.zip`
 are gitignored local build output.
+
+The CI lint step can be run locally before pushing:
+
+```sh
+find src database lang -name '*.php' -print0 | xargs -0 -n1 php -l
+```
 
 ## Architecture
 
