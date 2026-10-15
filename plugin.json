@@ -2,11 +2,11 @@
   "id": "enhanced-server-sorter",
   "name": "Enhanced Server Sorter",
   "author": "Olivier D., 05678",
-  "version": "1.4.2-stormsolutions",
+  "version": "1.4.0-stormsolutions",
   "description": "Organize servers into per-user folders and group them on the server list.",
   "category": "plugin",
   "url": "https://github.com/pelican-plugins-community/enhanced-server-sorter",
-  "update_url": "https://raw.githubusercontent.com/StormSolutions-HU/enhanced-server-sorter/main/update.json",
+  "update_url": "https://raw.githubusercontent.com/StormSolutionsHU/enhanced-server-sorter/main/update.json",
   "namespace": "Olivier\\EnhancedServerSorter",
   "class": "EnhancedServerSorterPlugin",
   "panels": [
