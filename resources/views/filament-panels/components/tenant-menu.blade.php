@@ -4,12 +4,6 @@
 
 @php
     use Filament\Actions\Action;
-    use Filament\Models\Contracts\HasCurrentTenantLabel;
-    use Filament\Support\Facades\FilamentView;
-    use Filament\Support\Icons\Heroicon;
-    use Filament\Support\View\ComponentAttributeBag;
-    use Filament\View\PanelsIconAlias;
-    use Filament\View\PanelsRenderHook;
     use Illuminate\Support\Arr;
 
     $currentTenant = filament()->getTenant();
@@ -17,14 +11,12 @@
 
     $items = $this->getTenantMenuItems();
 
-    $tenants = $this->getSwitchableTenants();
-    $canSwitchTenants = filled($tenants);
-    $menuTenants = $canSwitchTenants
-        ? app(\Olivier\EnhancedServerSorter\Services\FolderService::class)->sortTenants(
-            array_values(array_filter([$currentTenant, ...$tenants])),
-            filament()->auth()->id(),
-        )
-        : [];
+    $tenants = filament()->getUserTenants(filament()->auth()->user());
+
+    $canSwitchTenants = filament()->hasTenantSwitcher() && filled(array_filter(
+        $tenants,
+        fn (\Illuminate\Database\Eloquent\Model $tenant): bool => ! $tenant->is($currentTenant),
+    ));
 
     $isSearchable = $canSwitchTenants && (filament()->isTenantMenuSearchable() ?? (count($tenants) >= 10));
 
@@ -34,37 +26,24 @@
     $itemsBeforeTenantSwitcher = $itemsBeforeAndAfterTenantSwitcher[true] ?? collect();
     $itemsAfterTenantSwitcher = $itemsBeforeAndAfterTenantSwitcher[false] ?? collect();
 
-    $multiGroupAfterSwitcher = $this->hasMultipleTenantMenuItemGroups();
-    $afterSwitcherItemGroups = $multiGroupAfterSwitcher ? $this->getTenantMenuItemGroupsAfterSwitcher() : [];
-
     $isSidebarCollapsibleOnDesktop = filament()->isSidebarCollapsibleOnDesktop();
-
-    if ($isSearchable) {
-        foreach ($items as $item) {
-            $item->extraAttributes([
-                'role' => ($item->getUrl() && (! $item->shouldPostToUrl())) ? 'link' : 'button',
-                'tabindex' => '0',
-            ], merge: true);
-        }
-    }
 @endphp
 
-{{ FilamentView::renderHook(PanelsRenderHook::TENANT_MENU_BEFORE) }}
+{{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::TENANT_MENU_BEFORE) }}
 
 <x-filament::dropdown
-    :menu="! $isSearchable"
-    placement="bottom-start"
-    size
-    :teleport="$teleport"
-    :attributes="
+        placement="bottom-start"
+        size
+        :teleport="$teleport"
+        :attributes="
         \Filament\Support\prepare_inherited_attributes($attributes)
             ->class(['fi-tenant-menu'])
     "
 >
     <x-slot name="trigger">
         <button
-            @if ($isSidebarCollapsibleOnDesktop)
-                x-data="{ tooltip: false }"
+                @if ($isSidebarCollapsibleOnDesktop)
+                    x-data="{ tooltip: false }"
                 x-effect="
                     tooltip = $store.sidebar.isOpen
                         ? false
@@ -75,22 +54,22 @@
                           }
                 "
                 x-tooltip.html="tooltip"
-            @endif
-            type="button"
-            class="fi-tenant-menu-trigger"
+                @endif
+                type="button"
+                class="fi-tenant-menu-trigger"
         >
             <x-filament-panels::avatar.tenant
-                :tenant="$currentTenant"
-                loading="lazy"
+                    :tenant="$currentTenant"
+                    loading="lazy"
             />
 
             <span
-                @if ($isSidebarCollapsibleOnDesktop)
-                    x-show="$store.sidebar.isOpen"
-                @endif
-                class="fi-tenant-menu-trigger-text"
+                    @if ($isSidebarCollapsibleOnDesktop)
+                        x-show="$store.sidebar.isOpen"
+                    @endif
+                    class="fi-tenant-menu-trigger-text"
             >
-                @if ($currentTenant instanceof HasCurrentTenantLabel)
+                @if ($currentTenant instanceof \Filament\Models\Contracts\HasCurrentTenantLabel)
                     <span class="fi-tenant-menu-trigger-current-tenant-label">
                         {{ $currentTenant->getCurrentTenantLabel() }}
                     </span>
@@ -102,7 +81,7 @@
             </span>
 
             {{
-                \Filament\Support\generate_icon_html(Heroicon::ChevronDown, alias: PanelsIconAlias::TENANT_MENU_TOGGLE_BUTTON, attributes: new ComponentAttributeBag([
+                \Filament\Support\generate_icon_html(\Filament\Support\Icons\Heroicon::ChevronDown, alias: \Filament\View\PanelsIconAlias::TENANT_MENU_TOGGLE_BUTTON, attributes: new \Illuminate\View\ComponentAttributeBag([
                     'x-show' => $isSidebarCollapsibleOnDesktop ? '$store.sidebar.isOpen' : null,
                 ]))
             }}
@@ -127,64 +106,45 @@
                         </label>
 
                         <x-filament::input
-                            x-bind:id="$id('input')"
-                            x-model="search"
-                            :placeholder="__('filament-panels::layout.tenant_menu.search_field.placeholder')"
-                            type="search"
+                                x-bind:id="$id('input')"
+                                x-model="search"
+                                placeholder="{{ __('filament-panels::layout.tenant_menu.search_field.placeholder') }}"
+                                type="search"
                         />
                     </div>
                 @endif
 
-                @foreach ($menuTenants as $tenant)
+                @foreach ($tenants as $tenant)
                     @php
                         $tenantImage = filament()->getTenantAvatarUrl($tenant);
                         $tenantName = filament()->getTenantName($tenant);
                         $tenantUrl = filament()->getUrl($tenant);
-                        $isCurrentTenant = $tenant->is($currentTenant);
                     @endphp
 
                     <div
-                        class="fi-tenant-menu-item"
-                        x-show="
+                            x-show="
                             search === '' ||
                                 @js($tenantName).replace(/ /g, '')
                                     .toLowerCase()
                                     .includes(search.replace(/ /g, '').toLowerCase())
                         "
                     >
-                        @if ($isCurrentTenant)
+                        @if ($tenant->is($currentTenant))
                             <x-filament::dropdown.list.item
-                                :image="$tenantImage"
-                                :disabled="true"
-                                tag="button"
-                                type="button"
-                                aria-current="page"
+                                    :image="$tenantImage"
+                                    tag="button"
+                                    type="button"
+                                    disabled
+                                    class="fi-disabled"
+                                    style="opacity: 0.5; pointer-events: none;"
                             >
                                 {{ $tenantName }}
                             </x-filament::dropdown.list.item>
-                        @elseif ($isSearchable)
-                            <a
-                                {{ \Filament\Support\generate_href_html($tenantUrl) }}
-                                class="fi-dropdown-list-item"
-                            >
-                                @if ($tenantImage)
-                                    <div
-                                        class="fi-dropdown-list-item-image"
-                                        style="
-                                            background-image: url('{{ $tenantImage }}');
-                                        "
-                                    ></div>
-                                @endif
-
-                                <span class="fi-dropdown-list-item-label">
-                                    {{ $tenantName }}
-                                </span>
-                            </a>
                         @else
                             <x-filament::dropdown.list.item
-                                :href="$tenantUrl"
-                                :image="$tenantImage"
-                                tag="a"
+                                    :href="$tenantUrl"
+                                    :image="$tenantImage"
+                                    tag="a"
                             >
                                 {{ $tenantName }}
                             </x-filament::dropdown.list.item>
@@ -195,15 +155,7 @@
         </div>
     @endif
 
-    @if ($multiGroupAfterSwitcher && $afterSwitcherItemGroups !== [])
-        @foreach ($afterSwitcherItemGroups as $afterSwitcherGroup)
-            <x-filament::dropdown.list>
-                @foreach ($afterSwitcherGroup as $item)
-                    {{ $item }}
-                @endforeach
-            </x-filament::dropdown.list>
-        @endforeach
-    @elseif ($itemsAfterTenantSwitcher->isNotEmpty())
+    @if ($itemsAfterTenantSwitcher->isNotEmpty())
         <x-filament::dropdown.list>
             @foreach ($itemsAfterTenantSwitcher as $item)
                 {{ $item }}
@@ -212,4 +164,4 @@
     @endif
 </x-filament::dropdown>
 
-{{ FilamentView::renderHook(PanelsRenderHook::TENANT_MENU_AFTER) }}
+{{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::TENANT_MENU_AFTER) }}

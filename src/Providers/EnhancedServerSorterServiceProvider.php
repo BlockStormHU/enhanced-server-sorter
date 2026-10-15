@@ -8,45 +8,32 @@ use App\Models\User;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-<<<<<<< Updated upstream
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\ServiceProvider;
-=======
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Olivier\EnhancedServerSorter\Models\ServerFolderAssignment;
 use Olivier\EnhancedServerSorter\Services\FolderService;
 use Throwable;
->>>>>>> Stashed changes
 
 class EnhancedServerSorterServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-<<<<<<< Updated upstream
+        $this->app->scoped('filament', fn(): FolderOrderedFilamentManager => new FolderOrderedFilamentManager());
+
         Server::resolveRelationUsing('enhancedFolderAssignment', function (Server $server) {
             return $server->hasOne(\Olivier\EnhancedServerSorter\Models\ServerFolderAssignment::class, 'server_id', 'id')
                 ->where('user_id', user()?->id)
                 ->with('folder');
         });
-=======
-        $this->app->scoped(FolderService::class);
-
-        Server::resolveRelationUsing('enhancedFolderAssignment', fn (Server $server) => $server
-            ->hasOne(ServerFolderAssignment::class, 'server_id')
-            ->where('user_id', user()?->id));
->>>>>>> Stashed changes
     }
 
     public function boot(): void
     {
-<<<<<<< Updated upstream
+        View::prependNamespace('filament-panels', plugin_path('enhanced-server-sorter', 'resources/views/filament-panels'));
+
         if (!\Illuminate\Support\Facades\Schema::hasTable('enhanced_server_folder_server')) {
             return;
         }
-=======
-        View::prependNamespace('filament-panels', plugin_path('enhanced-server-sorter', 'resources/views/filament-panels'));
->>>>>>> Stashed changes
 
         Table::configureUsing(function (Table $table): void {
             if (!$table->getLivewire() instanceof ListServers || !$this->app->make(FolderService::class)->isReady()) {
@@ -54,37 +41,7 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
             }
 
             $table
-<<<<<<< Updated upstream
-                ->groups([
-                    (function (): Group {
-                        $group = Group::make('enhancedFolderAssignment.folder.name')
-                            ->label(fn () => trans('enhanced-server-sorter::messages.folders'))
-                            ->titlePrefixedWithLabel(false);
-
-                        $group->getTitleFromRecordUsing(function (Server $server): string {
-                            return $server->enhancedFolderAssignment?->folder?->name ?? trans('enhanced-server-sorter::messages.unassigned');
-                        })
-                        ->collapsible();
-
-                        $group->orderQueryUsing(function (Builder $query, string $direction): Builder {
-                            $userId = (int) (user()?->id ?? 0);
-                            $serverIdColumn = Server::query()->qualifyColumn('id');
-                            $folderSortSub = "(SELECT esf.sort FROM enhanced_server_folder_server esfs JOIN enhanced_server_folders esf ON esf.id = esfs.folder_id WHERE esfs.user_id = {$userId} AND esfs.server_id = {$serverIdColumn} LIMIT 1)";
-                            $positionSub = "(SELECT esfs.position FROM enhanced_server_folder_server esfs WHERE esfs.user_id = {$userId} AND esfs.server_id = {$serverIdColumn} LIMIT 1)";
-
-                            $directionSql = $direction === 'desc' ? 'DESC' : 'ASC';
-
-                            return $query
-                                ->orderByRaw("COALESCE({$folderSortSub}, 2147483647) {$directionSql}")
-                                ->orderByRaw("COALESCE({$positionSub}, 2147483647) {$directionSql}");
-                        });
-
-                        return $group;
-                    })(),
-                ])
-=======
                 ->groups([$this->makeFolderGroup()])
->>>>>>> Stashed changes
                 ->defaultGroup('enhancedFolderAssignment.folder.name');
         });
 
@@ -96,8 +53,6 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
             }
         });
     }
-<<<<<<< Updated upstream
-=======
 
     private function makeFolderGroup(): Group
     {
@@ -143,5 +98,4 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
         $base->bindings['where'] = [];
         $base->whereIn($serverId, $ids);
     }
->>>>>>> Stashed changes
 }
