@@ -45,6 +45,17 @@ jobs:
           path: enhanced-server-sorter
           persist-credentials: false
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: none
+
+      - name: Lint PHP
+        # A release must never ship code that doesn't parse (1.4.0 did); CI runs the same check.
+        run: find enhanced-server-sorter/src enhanced-server-sorter/database enhanced-server-sorter/lang -name '*.php' -print0 | xargs -0 -n1 php -l
+
       - name: Checkout default branch
         uses: actions/checkout@v7
         with:

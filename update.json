@@ -1,7 +1,7 @@
 {
   "*": {
     "version": "1.4.0-stormsolutions",
-    "download_url": "https://github.com/StormSolutionsHU/enhanced-server-sorter/releases/download/1.4.0-stormsolutions/enhanced-server-sorter.zip",
+    "download_url": "https://github.com/BlockStormHU/enhanced-server-sorter/releases/download/1.4.0-stormsolutions/enhanced-server-sorter.zip",
     "sha256": "fb84a4a8b18a1e8d72cf03446235ed597e564ea388466db52eb87cb59c776d1f"
   }
 }
