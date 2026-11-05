@@ -20,6 +20,9 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    concurrency:
+      group: one-ci-run-per-repo
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v7
