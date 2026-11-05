@@ -1,9 +1,14 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '.idea/**'
+      - '.githooks/**'
+      - 'LICENSE'
+  workflow_dispatch:
 
 permissions:
   contents: read
