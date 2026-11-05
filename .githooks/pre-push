@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Runs the same checks as CI before a branch is pushed, so CI on GitHub rarely fails.
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip once:               git push --no-verify
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+pushes_branch=false
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+  if [[ "$local_sha" != "$zero" && "$local_ref" == refs/heads/* ]]; then
+    pushes_branch=true
+  fi
+done
+$pushes_branch || exit 0
+
+cd "$(git rev-parse --show-toplevel)"
+for tool in php; do
+  if ! command -v "$tool" > /dev/null; then
+    echo "pre-push: '$tool' is not installed, so the local checks are skipped; CI runs them on the pull request" >&2
+    exit 0
+  fi
+done
+
+echo "pre-push: running the CI checks locally (skip with --no-verify)"
+find src database lang -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+echo "pre-push: checks passed"

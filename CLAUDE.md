@@ -31,7 +31,7 @@ https://github.com/pelican-dev/panel`) and the Filament version from its `compos
 3. Commits the new version and an `update.json` containing the zip's `sha256` to `main`. Pelican checks that
    checksum during in-panel updates.
 
-`.github/workflows/ci.yml` runs on every push and PR. It runs `php -l` with PHP 8.4, checks the `plugin.json`
+`.github/workflows/ci.yml` runs on pull requests into `main` (not on docs-only changes) and by hand. The `.githooks/pre-push` hook runs the same checks before every push; enable it once per clone with `git config core.hooksPath .githooks`. It runs `php -l` with PHP 8.4, checks the `plugin.json`
 fields, checks that `plugin.json` and `update.json` have the same version, and checks that every
 `lang/*/messages.php` has the same keys as `lang/en`. Run `actionlint` after editing either workflow.
 

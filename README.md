@@ -135,7 +135,7 @@ database/migrations/                    Plugin tables and indexes
 lang/                                   Translations
 ```
 
-Every push and pull request runs [CI](.github/workflows/ci.yml): a PHP 8.4 syntax check, checks on `plugin.json`
+Pull requests into `main` run [CI](.github/workflows/ci.yml) (docs-only changes are skipped; it can also be started by hand): a PHP 8.4 syntax check, checks on `plugin.json`
 and `update.json`, and a check that every language has the same keys.
 
 ### Releasing
