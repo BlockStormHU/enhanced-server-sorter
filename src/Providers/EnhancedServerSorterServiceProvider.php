@@ -18,22 +18,16 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->scoped('filament', fn(): FolderOrderedFilamentManager => new FolderOrderedFilamentManager());
+        $this->app->scoped(FolderService::class);
 
-        Server::resolveRelationUsing('enhancedFolderAssignment', function (Server $server) {
-            return $server->hasOne(\Olivier\EnhancedServerSorter\Models\ServerFolderAssignment::class, 'server_id', 'id')
-                ->where('user_id', user()?->id)
-                ->with('folder');
-        });
+        Server::resolveRelationUsing('enhancedFolderAssignment', fn (Server $server) => $server
+            ->hasOne(ServerFolderAssignment::class, 'server_id')
+            ->where('user_id', user()?->id));
     }
 
     public function boot(): void
     {
         View::prependNamespace('filament-panels', plugin_path('enhanced-server-sorter', 'resources/views/filament-panels'));
-
-        if (!\Illuminate\Support\Facades\Schema::hasTable('enhanced_server_folder_server')) {
-            return;
-        }
 
         Table::configureUsing(function (Table $table): void {
             if (!$table->getLivewire() instanceof ListServers || !$this->app->make(FolderService::class)->isReady()) {
