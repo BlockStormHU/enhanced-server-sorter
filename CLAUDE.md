@@ -24,10 +24,10 @@ https://github.com/pelican-dev/panel`) and the Filament version from its `compos
 
 ## Release / packaging
 
-`.github/workflows/package.yml` runs when a GitHub release is published (or manually with a tag). It:
-1. Checks out the tag and builds `enhanced-server-sorter.zip` from it, with `plugin.json` `.version` (tag without a
-   leading `v`) and `.update_url` set.
-2. Attaches the zip to the release.
+`.github/workflows/package.yml` (Actions → Release → Run workflow on `main`, with a version such as `v1.4.0`):
+1. Refuses a malformed version, a non-`main` run and a version that already exists.
+2. Builds `enhanced-server-sorter.zip` from the current commit, with `plugin.json` `.version` (version without a
+   leading `v`) and `.update_url` set, then publishes it as an immutable release (draft, attach, publish).
 3. Commits the new version and an `update.json` containing the zip's `sha256` to `main`. Pelican checks that
    checksum during in-panel updates.
 
@@ -35,7 +35,7 @@ https://github.com/pelican-dev/panel`) and the Filament version from its `compos
 fields, checks that `plugin.json` and `update.json` have the same version, and checks that every
 `lang/*/messages.php` has the same keys as `lang/en`. Run `actionlint` after editing either workflow.
 
-So don't bump `plugin.json`/`update.json` by hand for a release; publishing the release does it. `dist/` and `*.zip`
+So don't bump `plugin.json`/`update.json` by hand for a release; the Release workflow does it. Never publish a release by hand on GitHub. `dist/` and `*.zip`
 are gitignored local build output.
 
 The CI lint step can be run locally before pushing:
