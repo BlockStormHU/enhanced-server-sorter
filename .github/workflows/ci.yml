@@ -1,6 +1,14 @@
 name: CI
 
 on:
+  push:
+    branches: [ '**' ]
+    tags-ignore: [ '**' ]
+    paths-ignore:
+      - '**.md'
+      - '.idea/**'
+      - '.githooks/**'
+      - 'LICENSE'
   pull_request:
     branches: [ main ]
     paths-ignore:
@@ -8,21 +16,23 @@ on:
       - '.idea/**'
       - '.githooks/**'
       - 'LICENSE'
+  schedule:
+    # weekly on the default branch: catches dependency, platform and toolchain drift
+    - cron: '5 5 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # a newer commit replaces the older run of the same branch; the default branch keeps every run
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
 jobs:
   validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    concurrency:
-      group: one-ci-run-per-repo
-      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
