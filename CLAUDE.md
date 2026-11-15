@@ -75,8 +75,15 @@ servers last**.
   - prepends `resources/views/filament-panels` to the `filament-panels` view namespace, which is how the
     `tenant-menu.blade.php` override takes effect.
 - **`resources/views/filament-panels/components/tenant-menu.blade.php`**: a copy of Filament v5.10.1's tenant menu
-  with two small changes: `$menuTenants` (the current server plus `$tenants`, sorted by `sortTenants()`) replaces
-  `$tenants` in the loop, and the current server is shown as a disabled item. After a Filament upgrade, diff it against `vendor/filament/panels/resources/views/components/tenant-menu.blade.php`.
+  with three small changes: `$menuTenants` (the current server plus `$tenants`, sorted by `sortTenants()`) replaces
+  `$tenants` in the loop, the current server is shown as a disabled item, and the collapsed-sidebar tooltip uses
+  `x-tooltip` instead of `x-tooltip.html`, so a server name is shown as text, never as HTML (Filament 5.10.2 fixed the
+  same thing upstream). Checked statically against Filament 5.7.5 (Pelican beta36): every method and component it uses
+  exists there too. After a Filament upgrade, diff it against
+  `vendor/filament/panels/resources/views/components/tenant-menu.blade.php`.
+- The server switcher is sorted only through this view. Don't rebind Filament's `filament` manager to sort tenants;
+  the 1.4.0 merge brought that back by mistake, without its `use` import, so it would throw class-not-found whenever
+  `filament` is resolved.
 
 ### Data model (`database/migrations`)
 
