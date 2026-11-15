@@ -1,12 +1,10 @@
 name: Release
 
 on:
-  release:
-    types: [ published ]
   workflow_dispatch:
     inputs:
-      tag:
-        description: Release tag to package (for example v1.4.0)
+      version:
+        description: 'Version to release, e.g. v1.2.3 (v1.2.3-rc.1 makes a pre-release)'
         required: true
         type: string
 
@@ -24,15 +22,29 @@ jobs:
       group: one-ci-run-per-repo
       cancel-in-progress: false
     env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      TAG: ${{ inputs.version }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
       REPOSITORY: ${{ github.repository }}
     steps:
-      - name: Resolve version
+      - name: Check the version, the branch and that the release is new
         id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ ! "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Tag '$TAG' is not a version (expected e.g. v1.4.0 or 1.4.0-beta)"
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "::error::Releases are cut from $DEFAULT_BRANCH. Pick it under 'Use workflow from'."
+            exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" > /dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Releases are immutable, so pick the next version."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::A release or draft called $TAG already exists. A failed run leaves a draft: delete it and run again."
             exit 1
           fi
 
@@ -41,15 +53,15 @@ jobs:
           echo "update_url=https://raw.githubusercontent.com/$REPOSITORY/$DEFAULT_BRANCH/update.json" >> "$GITHUB_OUTPUT"
           echo "download_url=https://github.com/$REPOSITORY/releases/download/$TAG/enhanced-server-sorter.zip" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout release tag
-        uses: actions/checkout@v7
+      - name: Checkout the commit to release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ github.sha }}
           path: enhanced-server-sorter
           persist-credentials: false
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.4'
           coverage: none
@@ -60,7 +72,7 @@ jobs:
         run: find enhanced-server-sorter/src enhanced-server-sorter/database enhanced-server-sorter/lang -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: Checkout default branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.DEFAULT_BRANCH }}
           path: metadata
@@ -83,15 +95,20 @@ jobs:
           echo "sha256=$(sha256sum enhanced-server-sorter.zip | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: enhanced-server-sorter
           path: enhanced-server-sorter.zip
 
-      - name: Attach zip to release
+      # Releases are immutable: the zip goes into a draft, which is then published in one go.
+      - name: Publish the release with the zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$TAG" enhanced-server-sorter.zip --repo "$REPOSITORY" --clobber
+        run: |
+          PRERELEASE=""; [[ "$TAG" == *-* ]] && PRERELEASE="--prerelease"
+          gh release create "$TAG" --repo "$REPOSITORY" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes $PRERELEASE
+          gh release upload "$TAG" enhanced-server-sorter.zip --repo "$REPOSITORY"
+          gh release edit "$TAG" --repo "$REPOSITORY" --draft=false
 
       - name: Commit release metadata
         env:
