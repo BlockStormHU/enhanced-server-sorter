@@ -2,7 +2,7 @@
   "id": "enhanced-server-sorter",
   "name": "Enhanced Server Sorter",
   "author": "Olivier D., 05678",
-  "version": "1.4.0-stormsolutions",
+  "version": "1.5.0-blockstorm",
   "description": "Organize servers into per-user folders and group them on the server list.",
   "category": "plugin",
   "url": "https://github.com/pelican-plugins-community/enhanced-server-sorter",
