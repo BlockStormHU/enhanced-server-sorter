@@ -1,7 +1,7 @@
 {
   "*": {
     "version": "1.5.0-blockstorm",
-    "download_url": "https://github.com/BlockStormHU/enhanced-server-sorter/releases/download/v1.5.0-blockstorm/enhanced-server-sorter.zip",
+    "download_url": "https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/releases/download/v1.5.0-blockstorm/enhanced-server-sorter.zip",
     "sha256": "186ef641ed754875d85a41d36ed5f787419ee639fba0ac6dd5153649042ce45e"
   }
 }
