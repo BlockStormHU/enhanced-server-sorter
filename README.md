@@ -4,9 +4,11 @@
 
 **Folders and a custom order for your servers in the Pelican panel.**
 
-[![Latest release](https://img.shields.io/github/v/release/BlockStormHU/enhanced-server-sorter?include_prereleases&label=release)](https://github.com/BlockStormHU/enhanced-server-sorter/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/BlockStormHU/pelican-enhanced-server-sorter-fork?include_prereleases&label=release)](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/releases)
 [![Pelican](https://img.shields.io/badge/Pelican-1.0-0e7490)](https://pelican.dev)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+
+> BlockStorm's fork of [pelican-plugins-community/enhanced-server-sorter](https://github.com/pelican-plugins-community/enhanced-server-sorter).
 
 </div>
 
@@ -24,6 +26,19 @@ stay the same for all users.
 - 🔀 A server switcher that follows the same order
 - 🛠️ Default folders that every user gets automatically, optionally locked
 - 🌍 Available in 32 languages
+
+## 📖 Documentation
+
+The full guide is in the [wiki](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/wiki):
+
+- [Installation](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/wiki/Installation): requirements,
+  installing the `v1.5.0-blockstorm` release, updating and uninstalling
+- [Using Folders](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/wiki/Using-Folders): folders, the
+  server list and the server switcher, for every panel user
+- [Default Folders](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/wiki/Default-Folders): folders that
+  administrators give to every user, and locking them
+- [Original README](https://github.com/BlockStormHU/pelican-enhanced-server-sorter-fork/wiki/Original-README): the upstream
+  project's README
 
 ---
 
