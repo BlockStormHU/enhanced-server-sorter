@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Virhe oletuskansioiden tallentamisessa',
     'duplicate_servers' => 'Päällekkäisiä palvelimia havaittu',
     'duplicate_servers_message' => 'Seuraavat palvelimet on määritetty useisiin kansioihin: :servers',
+    'duplicate_folder_names' => 'Päällekkäiset kansioiden nimet',
+    'duplicate_folder_names_message' => 'Jokaisella kansiolla on oltava yksilöllinen nimi. Käytetty useammin kuin kerran: :folders',
+    'default_folders_order_help' => 'Ylläpitäjän kansiot säilyttävät aina ylläpitäjän järjestyksen. Omia kansioitasi voi siirtää mihin tahansa niiden väliin.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Erro ao salvar pastas padrão',
     'duplicate_servers' => 'Servidores duplicados detectados',
     'duplicate_servers_message' => 'Os seguintes servidores estão atribuídos a várias pastas: :servers',
+    'duplicate_folder_names' => 'Nomes de pastas duplicados',
+    'duplicate_folder_names_message' => 'Cada pasta precisa de um nome único. Usado mais de uma vez: :folders',
+    'default_folders_order_help' => 'As pastas do administrador sempre mantêm a ordem do administrador. Suas próprias pastas podem ser movidas para qualquer posição entre elas.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Chyba pri ukladaní predvolených priečinkov',
     'duplicate_servers' => 'Zistené duplicitné servery',
     'duplicate_servers_message' => 'Nasledujúce servery sú priradené k viacerým priečinkom: :servers',
+    'duplicate_folder_names' => 'Duplicitné názvy priečinkov',
+    'duplicate_folder_names_message' => 'Každý priečinok musí mať jedinečný názov. Použité viackrát: :folders',
+    'default_folders_order_help' => 'Priečinky od administrátora vždy zachovávajú poradie administrátora. Vlastné priečinky môžete presunúť kamkoľvek medzi ne.',
 ];

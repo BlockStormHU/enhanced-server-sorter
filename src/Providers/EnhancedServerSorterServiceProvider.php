@@ -30,9 +30,13 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
         View::prependNamespace('filament-panels', plugin_path('enhanced-server-sorter', 'resources/views/filament-panels'));
 
         Table::configureUsing(function (Table $table): void {
-            if (!$table->getLivewire() instanceof ListServers || !$this->app->make(FolderService::class)->isReady()) {
+            $folders = $this->app->make(FolderService::class);
+
+            if (!$table->getLivewire() instanceof ListServers || !$folders->isReady()) {
                 return;
             }
+
+            $folders->ensureUserSynced(user()?->id);
 
             $table
                 ->groups([$this->makeFolderGroup()])
@@ -64,12 +68,15 @@ class EnhancedServerSorterServiceProvider extends ServiceProvider
                 $this->unwrapDistinct($query, $serverId);
 
                 $folderSort = "(SELECT esf.sort FROM enhanced_server_folder_server esfs JOIN enhanced_server_folders esf ON esf.id = esfs.folder_id WHERE esfs.user_id = ? AND esfs.server_id = {$serverId} LIMIT 1)";
+                $folderId = "(SELECT esfs.folder_id FROM enhanced_server_folder_server esfs WHERE esfs.user_id = ? AND esfs.server_id = {$serverId} LIMIT 1)";
                 $position = "(SELECT esfs.position FROM enhanced_server_folder_server esfs WHERE esfs.user_id = ? AND esfs.server_id = {$serverId} LIMIT 1)";
 
                 return $query
                     ->orderByRaw("COALESCE({$folderSort}, 2147483647) {$direction}", [$userId])
+                    ->orderByRaw("COALESCE({$folderId}, 2147483647) {$direction}", [$userId])
                     ->orderByRaw("COALESCE({$position}, 2147483647) {$direction}", [$userId])
-                    ->orderBy($query->qualifyColumn('name'));
+                    ->orderBy($query->qualifyColumn('name'))
+                    ->orderBy($serverId);
             });
     }
 

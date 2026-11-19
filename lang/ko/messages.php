@@ -28,4 +28,7 @@ return [
     'error_saving' => '기본 폴더 저장 중 오류 발생',
     'duplicate_servers' => '중복 서버 감지됨',
     'duplicate_servers_message' => '다음 서버가 여러 폴더에 할당되어 있습니다: :servers',
+    'duplicate_folder_names' => '중복된 폴더 이름',
+    'duplicate_folder_names_message' => '각 폴더에는 고유한 이름이 필요합니다. 두 번 이상 사용됨: :folders',
+    'default_folders_order_help' => '관리자 폴더는 항상 관리자가 정한 순서를 유지합니다. 내 폴더는 그 사이 어디로든 옮길 수 있습니다.',
 ];

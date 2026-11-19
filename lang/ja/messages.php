@@ -28,4 +28,7 @@ return [
     'error_saving' => 'デフォルトフォルダの保存中にエラーが発生しました',
     'duplicate_servers' => '重複するサーバーが検出されました',
     'duplicate_servers_message' => '次のサーバーが複数のフォルダに割り当てられています: :servers',
+    'duplicate_folder_names' => 'フォルダー名が重複しています',
+    'duplicate_folder_names_message' => '各フォルダーには一意の名前が必要です。重複している名前: :folders',
+    'default_folders_order_help' => '管理者のフォルダーは常に管理者が決めた順序になります。自分のフォルダーはその間の好きな位置に移動できます。',
 ];

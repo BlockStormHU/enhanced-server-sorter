@@ -28,4 +28,7 @@ return [
     'error_saving' => 'خطأ في حفظ المجلدات الافتراضية',
     'duplicate_servers' => 'تم اكتشاف خوادم مكررة',
     'duplicate_servers_message' => 'الخوادم التالية مخصصة لمجلدات متعددة: :servers',
+    'duplicate_folder_names' => 'أسماء مجلدات مكررة',
+    'duplicate_folder_names_message' => 'يجب أن يكون لكل مجلد اسم فريد. مستخدم أكثر من مرة: :folders',
+    'default_folders_order_help' => 'تحتفظ مجلدات المسؤول دائمًا بترتيب المسؤول. يمكن نقل مجلداتك الخاصة إلى أي مكان بينها.',
 ];

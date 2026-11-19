@@ -78,6 +78,9 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                 return [
                     Repeater::make('folders')
                         ->label(fn () => trans('enhanced-server-sorter::messages.folders'))
+                        ->helperText(fn () => $this->folders()->defaultFolders()->isNotEmpty()
+                            ? trans('enhanced-server-sorter::messages.default_folders_order_help')
+                            : null)
                         ->schema([
                             Hidden::make('id'),
                             TextInput::make('name')
@@ -104,7 +107,7 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                         ->addActionLabel(fn () => trans('enhanced-server-sorter::messages.add_folder')),
                 ];
             })
-            ->action(function (array $data) {
+            ->action(function (array $data, Action $action) {
                 $user = user();
 
                 if (!$user || !$this->folders()->isReady()) {
@@ -112,6 +115,18 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                 }
 
                 $folders = $data['folders'] ?? [];
+
+                $duplicateNames = $this->folders()->duplicateFolderNames($folders);
+
+                if ($duplicateNames !== []) {
+                    Notification::make()
+                        ->title(trans('enhanced-server-sorter::messages.duplicate_folder_names'))
+                        ->body(trans('enhanced-server-sorter::messages.duplicate_folder_names_message', ['folders' => implode(', ', $duplicateNames)]))
+                        ->danger()
+                        ->send();
+
+                    $action->halt();
+                }
 
                 $duplicates = collect($folders)
                     ->flatMap(fn (array $folder) => $folder['server_ids'] ?? [])
@@ -131,7 +146,7 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
                         ->danger()
                         ->send();
 
-                    return;
+                    $action->halt();
                 }
 
                 $this->folders()->saveUserFolders($user->id, $folders, $user->accessibleServers()->pluck('id')->all());
@@ -187,6 +202,18 @@ class EnhancedServerSorterPlugin implements HasPluginSettings, Plugin
 
     public function saveSettings(array $data): void
     {
+        $duplicateNames = $this->folders()->duplicateFolderNames($data['default_folders'] ?? []);
+
+        if ($duplicateNames !== []) {
+            Notification::make()
+                ->title(trans('enhanced-server-sorter::messages.duplicate_folder_names'))
+                ->body(trans('enhanced-server-sorter::messages.duplicate_folder_names_message', ['folders' => implode(', ', $duplicateNames)]))
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         try {
             $this->folders()->saveDefaultFolders($data['default_folders'] ?? []);
 

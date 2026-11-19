@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Chyba při ukládání výchozích složek',
     'duplicate_servers' => 'Zjištěny duplicitní servery',
     'duplicate_servers_message' => 'Následující servery jsou přiřazeny k více složkám: :servers',
+    'duplicate_folder_names' => 'Duplicitní názvy složek',
+    'duplicate_folder_names_message' => 'Každá složka musí mít jedinečný název. Použito vícekrát: :folders',
+    'default_folders_order_help' => 'Složky od administrátora vždy zachovávají pořadí administrátora. Vlastní složky můžete přesunout kamkoli mezi ně.',
 ];

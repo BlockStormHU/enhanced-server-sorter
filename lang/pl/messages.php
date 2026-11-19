@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Błąd podczas zapisywania domyślnych folderów',
     'duplicate_servers' => 'Wykryto zduplikowane serwery',
     'duplicate_servers_message' => 'Następujące serwery są przypisane do wielu folderów: :servers',
+    'duplicate_folder_names' => 'Zduplikowane nazwy folderów',
+    'duplicate_folder_names_message' => 'Każdy folder musi mieć unikalną nazwę. Użyte więcej niż raz: :folders',
+    'default_folders_order_help' => 'Foldery administratora zawsze zachowują kolejność ustaloną przez administratora. Własne foldery możesz przenosić w dowolne miejsce między nimi.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Kesalahan menyimpan folder default',
     'duplicate_servers' => 'Server duplikat terdeteksi',
     'duplicate_servers_message' => 'Server berikut ditetapkan ke beberapa folder: :servers',
+    'duplicate_folder_names' => 'Nama folder duplikat',
+    'duplicate_folder_names_message' => 'Setiap folder memerlukan nama yang unik. Digunakan lebih dari sekali: :folders',
+    'default_folders_order_help' => 'Folder dari administrator selalu mengikuti urutan administrator. Folder Anda sendiri dapat dipindahkan ke mana saja di antaranya.',
 ];

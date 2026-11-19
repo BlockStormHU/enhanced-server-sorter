@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Fehler beim Speichern der Standard-Ordner',
     'duplicate_servers' => 'Doppelte Server erkannt',
     'duplicate_servers_message' => 'Die folgenden Server sind mehreren Ordnern zugewiesen: :servers',
+    'duplicate_folder_names' => 'Doppelte Ordnernamen',
+    'duplicate_folder_names_message' => 'Jeder Ordner braucht einen eindeutigen Namen. Mehrfach verwendet: :folders',
+    'default_folders_order_help' => 'Ordner des Administrators behalten immer die Reihenfolge des Administrators. Eigene Ordner können beliebig dazwischen verschoben werden.',
 ];

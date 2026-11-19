@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Error al guardar las carpetas predeterminadas',
     'duplicate_servers' => 'Servidores duplicados detectados',
     'duplicate_servers_message' => 'Los siguientes servidores están asignados a múltiples carpetas: :servers',
+    'duplicate_folder_names' => 'Nombres de carpeta duplicados',
+    'duplicate_folder_names_message' => 'Cada carpeta necesita un nombre único. Usado más de una vez: :folders',
+    'default_folders_order_help' => 'Las carpetas del administrador siempre mantienen el orden del administrador. Tus propias carpetas se pueden mover a cualquier lugar entre ellas.',
 ];

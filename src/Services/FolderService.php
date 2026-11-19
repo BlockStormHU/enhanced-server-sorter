@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Olivier\EnhancedServerSorter\Models\DefaultFolder;
@@ -20,6 +21,12 @@ class FolderService
         'enhanced_server_folder_server',
         'enhanced_server_default_folder_servers',
     ];
+
+    private const SYNC_VERSION = 2;
+
+    private const SYNC_CACHE_PREFIX = 'enhanced-server-sorter:synced:';
+
+    private const SYNC_LOCK_PREFIX = 'enhanced-server-sorter:sync-lock:';
 
     private ?bool $ready = null;
 
@@ -69,9 +76,10 @@ class FolderService
         $this->syncDefaultFolders($userId);
 
         return ServerFolder::query()
-            ->with(['assignments' => fn ($query) => $query->orderBy('position')])
+            ->with(['assignments' => fn ($query) => $query->orderBy('position')->orderBy('id')])
             ->where('user_id', $userId)
             ->orderBy('sort')
+            ->orderBy('id')
             ->get()
             ->map(fn (ServerFolder $folder) => [
                 'id' => $folder->id,
@@ -153,7 +161,52 @@ class FolderService
             ServerFolder::query()->whereKey($removedIds)->delete();
 
             $this->insertAssignments($rows);
+
+            $this->applyFolderOrder(
+                ServerFolder::query()->where('user_id', $userId)->get(['id', 'user_id', 'name', 'sort']),
+                $this->defaultRanks($this->defaultFolders()),
+            );
         });
+    }
+
+    public function duplicateFolderNames(array $folders): array
+    {
+        return collect($folders)
+            ->map(fn (array $folder) => trim((string) ($folder['name'] ?? '')))
+            ->filter(fn (string $name) => $name !== '')
+            ->groupBy(fn (string $name) => mb_strtolower($name))
+            ->filter(fn (Collection $names) => $names->count() > 1)
+            ->map(fn (Collection $names) => $names->first())
+            ->values()
+            ->all();
+    }
+
+    public function ensureUserSynced(?int $userId): void
+    {
+        if (!$userId || !$this->isReady()) {
+            return;
+        }
+
+        try {
+            $signature = $this->defaultsSignature();
+            $key = self::SYNC_CACHE_PREFIX . $userId;
+
+            if (Cache::get($key) === $signature) {
+                return;
+            }
+
+            Cache::lock(self::SYNC_LOCK_PREFIX . $userId, 30)->get(function () use ($userId, $key, $signature) {
+                if (Cache::get($key) === $signature) {
+                    return;
+                }
+
+                $this->syncDefaultFolders($userId);
+
+                Cache::forever($key, $signature);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     public function syncDefaultFolders(?int $userId = null): void
@@ -250,12 +303,18 @@ class FolderService
             return $tenants;
         }
 
+        $this->ensureUserSynced($userId);
+
         try {
             $rank = DB::table('enhanced_server_folder_server as esfs')
                 ->join('enhanced_server_folders as esf', 'esf.id', '=', 'esfs.folder_id')
                 ->where('esfs.user_id', $userId)
-                ->get(['esfs.server_id', 'esf.sort', 'esfs.position'])
-                ->mapWithKeys(fn (object $row) => [(int) $row->server_id => [(int) $row->sort, (int) $row->position]])
+                ->get(['esfs.server_id', 'esf.sort', 'esf.id as folder_id', 'esfs.position'])
+                ->mapWithKeys(fn (object $row) => [(int) $row->server_id => [
+                    (int) $row->sort,
+                    (int) $row->folder_id,
+                    (int) $row->position,
+                ]])
                 ->all();
         } catch (Throwable) {
             return $tenants;
@@ -266,10 +325,11 @@ class FolderService
             $rankB = $rank[$b->getKey()] ?? null;
 
             return match (true) {
-                $rankA === null && $rankB === null => strcasecmp((string) $a->name, (string) $b->name),
+                $rankA === null && $rankB === null => strcasecmp((string) $a->name, (string) $b->name)
+                    ?: $a->getKey() <=> $b->getKey(),
                 $rankA === null => 1,
                 $rankB === null => -1,
-                default => $rankA <=> $rankB,
+                default => ($rankA <=> $rankB) ?: $a->getKey() <=> $b->getKey(),
             };
         });
 
@@ -278,35 +338,33 @@ class FolderService
 
     private function syncDefaultFoldersForChunk(EloquentCollection $defaults, array $userIds): void
     {
-        $names = $defaults->pluck('name')->all();
+        $ranks = $this->defaultRanks($defaults);
 
         $foldersByUser = ServerFolder::query()
             ->whereIn('user_id', $userIds)
-            ->whereIn('name', $names)
-            ->get()
+            ->orderBy('sort')
+            ->orderBy('id')
+            ->get(['id', 'user_id', 'name', 'sort'])
             ->groupBy('user_id');
-
-        $maxSortByUser = ServerFolder::query()
-            ->whereIn('user_id', $userIds)
-            ->groupBy('user_id')
-            ->selectRaw('user_id, MAX(sort) as max_sort')
-            ->pluck('max_sort', 'user_id');
 
         $assignmentsByUser = ServerFolderAssignment::query()
             ->whereIn('user_id', $userIds)
             ->orderBy('position')
+            ->orderBy('id')
             ->get(['id', 'user_id', 'folder_id', 'server_id'])
             ->groupBy('user_id');
 
         $rows = [];
         $staleAssignmentIds = [];
+        $foldersToOrder = [];
 
         foreach ($userIds as $userId) {
-            $folders = ($foldersByUser->get($userId) ?? collect())->keyBy('name');
+            $userFolders = ($foldersByUser->get($userId) ?? new EloquentCollection())->values();
+            $folders = $userFolders->unique('name')->keyBy('name');
+            $createdIds = [];
 
             $assignments = $assignmentsByUser->get($userId) ?? collect();
             $assignedServerIds = $assignments->pluck('server_id')->flip()->all();
-            $nextSort = $maxSortByUser->has($userId) ? (int) $maxSortByUser->get($userId) + 10 : null;
 
             foreach ($defaults as $default) {
                 $serverIds = $default->serverAssignments->pluck('server_id')->all();
@@ -316,12 +374,12 @@ class FolderService
                     $folder = ServerFolder::query()->create([
                         'user_id' => $userId,
                         'name' => $default->name,
-                        'sort' => $nextSort ?? $default->sort,
+                        'sort' => $default->sort,
                     ]);
 
-                    if ($nextSort !== null) {
-                        $nextSort += 10;
-                    }
+                    $folders->put($default->name, $folder);
+                    $userFolders->push($folder);
+                    $createdIds[$folder->id] = true;
 
                     if (!$default->is_locked) {
                         $position = 0;
@@ -362,6 +420,8 @@ class FolderService
                     $rows[] = $this->assignmentRow($folder->id, $userId, $serverId, $position);
                 }
             }
+
+            $foldersToOrder[] = [$userFolders, $createdIds];
         }
 
         foreach (array_chunk($staleAssignmentIds, 500) as $chunk) {
@@ -369,6 +429,128 @@ class FolderService
         }
 
         $this->insertAssignments($rows);
+
+        foreach ($foldersToOrder as [$userFolders, $createdIds]) {
+            $this->applyFolderOrder($userFolders, $ranks, $createdIds);
+        }
+    }
+
+    private function defaultRanks(EloquentCollection $defaults): array
+    {
+        $ranks = [];
+
+        foreach ($defaults->values() as $index => $default) {
+            $ranks[$default->name] ??= $index;
+        }
+
+        return $ranks;
+    }
+
+    private function defaultsSignature(): string
+    {
+        return hash('sha256', json_encode([
+            self::SYNC_VERSION,
+            $this->defaultFolders()
+                ->map(fn (DefaultFolder $folder) => [
+                    $folder->name,
+                    (int) $folder->sort,
+                    (bool) $folder->is_locked,
+                    $folder->serverAssignments->pluck('server_id')->map(fn ($id) => (int) $id)->all(),
+                ])
+                ->values()
+                ->all(),
+        ]));
+    }
+
+    private function applyFolderOrder(Collection $folders, array $ranks, array $createdIds = []): void
+    {
+        $byId = $folders->keyBy('id');
+
+        $entries = $byId
+            ->map(fn (ServerFolder $folder) => [
+                'id' => (int) $folder->id,
+                'name' => (string) $folder->name,
+                'sort' => (int) $folder->sort,
+                'created' => isset($createdIds[$folder->id]),
+            ])
+            ->values()
+            ->all();
+
+        foreach ($this->orderFolders($entries, $ranks) as $index => $folderId) {
+            $folder = $byId->get($folderId);
+            $sort = $index * 10;
+
+            if ((int) $folder->sort === $sort) {
+                continue;
+            }
+
+            ServerFolder::query()->whereKey($folderId)->update(['sort' => $sort]);
+            $folder->sort = $sort;
+        }
+    }
+
+    private function orderFolders(array $entries, array $ranks): array
+    {
+        $existing = array_values(array_filter($entries, fn (array $entry) => !$entry['created']));
+        $created = array_values(array_filter($entries, fn (array $entry) => $entry['created']));
+
+        usort($existing, fn (array $a, array $b) => [$a['sort'], $a['id']] <=> [$b['sort'], $b['id']]);
+
+        $rankById = [];
+        foreach ($existing as $entry) {
+            if (isset($ranks[$entry['name']]) && !in_array($ranks[$entry['name']], $rankById, true)) {
+                $rankById[$entry['id']] = $ranks[$entry['name']];
+            }
+        }
+
+        $slots = [];
+        $defaults = [];
+        foreach ($existing as $index => $entry) {
+            if (isset($rankById[$entry['id']])) {
+                $slots[] = $index;
+                $defaults[] = $entry;
+            }
+        }
+
+        usort($defaults, fn (array $a, array $b) => $rankById[$a['id']] <=> $rankById[$b['id']]);
+
+        foreach ($slots as $slot => $index) {
+            $existing[$index] = $defaults[$slot];
+        }
+
+        usort($created, fn (array $a, array $b) => [$ranks[$a['name']] ?? PHP_INT_MAX, $a['id']]
+            <=> [$ranks[$b['name']] ?? PHP_INT_MAX, $b['id']]);
+
+        $ordered = $existing;
+
+        foreach ($created as $entry) {
+            $rank = $ranks[$entry['name']] ?? PHP_INT_MAX;
+            $after = null;
+            $before = null;
+
+            foreach ($ordered as $index => $placed) {
+                $placedRank = $rankById[$placed['id']] ?? null;
+
+                if ($placedRank === null) {
+                    continue;
+                }
+
+                if ($placedRank < $rank) {
+                    $after = $index;
+                } elseif ($before === null) {
+                    $before = $index;
+                }
+            }
+
+            $position = $after !== null ? $after + 1 : ($before ?? count($ordered));
+            array_splice($ordered, $position, 0, [$entry]);
+
+            if ($rank !== PHP_INT_MAX) {
+                $rankById[$entry['id']] = $rank;
+            }
+        }
+
+        return array_column($ordered, 'id');
     }
 
     private function assignmentRow(int $folderId, int $userId, int $serverId, int $position): array

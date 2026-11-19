@@ -53,13 +53,24 @@ servers last**.
   memoized values (`isReady()`, `defaultFolders()`) last for one request. Get it with `app(FolderService::class)`.
   - `saveUserFolders()` replaces a user's folders in one transaction: `sort = index * 10`, `position` = index in the
     select, server IDs limited to the user's accessible servers. Folders left out of the submission are deleted,
-    except locked ones.
+    except locked ones. The folder order is then normalized (see below). The modal refuses duplicate folder names
+    (case-insensitive, `duplicateFolderNames()`) and duplicate servers, and halts so the user keeps their edits; the
+    admin settings form refuses duplicate default folder names.
   - `syncDefaultFolders(?userId)` copies the admin's default folders into user folders, in batches of 200 users.
-    Default and user folders are matched **by name**. An unlocked default folder is filled only when it is first
-    created for a user. A locked one is reset to the admin's list on every sync, and its servers are taken out of
-    the user's other folders. It runs when settings are saved (all users), on `User::created`, and when a user opens
-    the folder modal.
-  - `sortTenants()` orders servers for the server switcher.
+    Default and user folders are matched **by exact name** in PHP (not in SQL, so MySQL's case-insensitive collation
+    can't match a different folder). If a user has two folders with a default's name, the first one by sort is the
+    default. An unlocked default folder is filled only when it is first created for a user. A locked one is reset to
+    the admin's list on every sync, and its servers are taken out of the user's other folders. It runs when settings
+    are saved (all users), on `User::created`, when a user opens the folder modal, and through `ensureUserSynced()`.
+  - **Folder order: the admin order wins.** `orderFolders()` keeps the user's own folders where they are and puts the
+    default folders back into the admin's order within the slots they already hold. A newly created default folder
+    goes right after the previous default folder (admin order), else before the next one, else at the end. Every
+    user folder is then renumbered `index * 10`, so sort values never tie.
+  - `ensureUserSynced(userId)` runs on the `ListServers` table and in `sortTenants()`. It compares a per-user cache
+    entry with `defaultsSignature()` (a hash of `SYNC_VERSION` and every default folder's name, sort, lock and servers)
+    and re-syncs that user once when they differ, under a per-user cache lock. So an admin change, or a release that
+    bumps `SYNC_VERSION`, reaches every user on their next page load. Errors are reported, never thrown.
+  - `sortTenants()` orders servers for the server switcher: folder sort, folder id, position, then name and id.
 - **`src/EnhancedServerSorterPlugin.php`**: Filament UI only. `register()` adds the "Manage folders" header action to
   the app panel's `ListServers` page. `HasPluginSettings` provides the admin default-folders form. Both call
   `FolderService`.
@@ -67,7 +78,8 @@ servers last**.
   automatically, so plugin classes don't list providers. This provider:
   - adds a dynamic `enhancedFolderAssignment` relation to `Server`, scoped to the current user
   - uses `Table::configureUsing` to add a collapsible group by folder to the `ListServers` table. The group is
-    ordered by correlated subqueries. `COALESCE(..., 2147483647)` puts unassigned servers last.
+    ordered by correlated subqueries (folder sort, folder id, position), then server name and id.
+    `COALESCE(..., 2147483647)` puts unassigned servers last.
   - The base query `accessibleServers()` joins `subusers` and uses `distinct('servers.id')`, which PostgreSQL turns
     into `DISTINCT ON`. Any custom `ORDER BY` on it fails there ("SELECT DISTINCT ON expressions must match initial
     ORDER BY expressions"). `unwrapDistinct()` therefore rewrites it as `servers.* WHERE id IN (<original query>)`

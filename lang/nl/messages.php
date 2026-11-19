@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Fout bij opslaan van standaardmappen',
     'duplicate_servers' => 'Dubbele servers gedetecteerd',
     'duplicate_servers_message' => 'De volgende servers zijn aan meerdere mappen toegewezen: :servers',
+    'duplicate_folder_names' => 'Dubbele mapnamen',
+    'duplicate_folder_names_message' => 'Elke map heeft een unieke naam nodig. Meer dan eens gebruikt: :folders',
+    'default_folders_order_help' => 'Mappen van de beheerder behouden altijd de volgorde van de beheerder. Je eigen mappen kun je overal daartussen plaatsen.',
 ];

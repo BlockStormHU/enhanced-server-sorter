@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Erro ao guardar pastas predefinidas',
     'duplicate_servers' => 'Servidores duplicados detetados',
     'duplicate_servers_message' => 'Os seguintes servidores estão atribuídos a várias pastas: :servers',
+    'duplicate_folder_names' => 'Nomes de pastas duplicados',
+    'duplicate_folder_names_message' => 'Cada pasta precisa de um nome único. Usado mais de uma vez: :folders',
+    'default_folders_order_help' => 'As pastas do administrador mantêm sempre a ordem do administrador. As suas pastas podem ser movidas para qualquer posição entre elas.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => '儲存預設資料夾時發生錯誤',
     'duplicate_servers' => '偵測到重複的伺服器',
     'duplicate_servers_message' => '以下伺服器已分配給多個資料夾：:servers',
+    'duplicate_folder_names' => '資料夾名稱重複',
+    'duplicate_folder_names_message' => '每個資料夾都需要唯一的名稱。重複使用的名稱：:folders',
+    'default_folders_order_help' => '管理員的資料夾一律保持管理員設定的順序。你自己的資料夾可以移到它們之間的任何位置。',
 ];

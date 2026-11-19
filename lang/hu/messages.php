@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Hiba az alapértelmezett mappák mentésekor',
     'duplicate_servers' => 'Duplikált szerverek észlelve',
     'duplicate_servers_message' => 'A következő szerverek több mappához vannak hozzárendelve: :servers',
+    'duplicate_folder_names' => 'Ismétlődő mappanevek',
+    'duplicate_folder_names_message' => 'Minden mappának egyedi név kell. Többször használt név: :folders',
+    'default_folders_order_help' => 'Az adminisztrátor mappái mindig az adminisztrátor sorrendjét követik. A saját mappáid bárhová áthelyezhetők közöttük.',
 ];

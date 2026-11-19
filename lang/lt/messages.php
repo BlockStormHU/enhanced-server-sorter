@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Klaida išsaugant numatytuosius aplankus',
     'duplicate_servers' => 'Aptikti pasikartojantys serveriai',
     'duplicate_servers_message' => 'Šie serveriai priskirti keliems aplankams: :servers',
+    'duplicate_folder_names' => 'Pasikartojantys aplankų pavadinimai',
+    'duplicate_folder_names_message' => 'Kiekvienas aplankas turi turėti unikalų pavadinimą. Naudojama daugiau nei kartą: :folders',
+    'default_folders_order_help' => 'Administratoriaus aplankai visada išlaiko administratoriaus tvarką. Savo aplankus galite perkelti bet kur tarp jų.',
 ];
