@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Varsayılan klasörler kaydedilirken hata oluştu',
     'duplicate_servers' => 'Yinelenen sunucular tespit edildi',
     'duplicate_servers_message' => 'Aşağıdaki sunucular birden fazla klasöre atanmış: :servers',
+    'duplicate_folder_names' => 'Yinelenen klasör adları',
+    'duplicate_folder_names_message' => 'Her klasörün benzersiz bir adı olmalıdır. Birden fazla kullanılan: :folders',
+    'default_folders_order_help' => 'Yöneticinin klasörleri her zaman yöneticinin sıralamasını korur. Kendi klasörlerinizi bunların arasında istediğiniz yere taşıyabilirsiniz.',
 ];

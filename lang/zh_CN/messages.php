@@ -28,4 +28,7 @@ return [
     'error_saving' => '保存默认文件夹时出错',
     'duplicate_servers' => '检测到重复的服务器',
     'duplicate_servers_message' => '以下服务器已分配给多个文件夹：:servers',
+    'duplicate_folder_names' => '文件夹名称重复',
+    'duplicate_folder_names_message' => '每个文件夹都需要唯一的名称。重复使用的名称：:folders',
+    'default_folders_order_help' => '管理员的文件夹始终保持管理员设定的顺序。你自己的文件夹可以移动到它们之间的任意位置。',
 ];

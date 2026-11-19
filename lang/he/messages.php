@@ -28,4 +28,7 @@ return [
     'error_saving' => 'שגיאה בשמירת תיקיות ברירת המחדל',
     'duplicate_servers' => 'זוהו שרתים כפולים',
     'duplicate_servers_message' => 'השרתים הבאים מוקצים למספר תיקיות: :servers',
+    'duplicate_folder_names' => 'שמות תיקיות כפולים',
+    'duplicate_folder_names_message' => 'לכל תיקייה דרוש שם ייחודי. בשימוש יותר מפעם אחת: :folders',
+    'default_folders_order_help' => 'התיקיות של המנהל תמיד שומרות על הסדר של המנהל. ניתן להזיז את התיקיות שלך לכל מקום ביניהן.',
 ];

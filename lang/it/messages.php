@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Errore nel salvataggio delle cartelle predefinite',
     'duplicate_servers' => 'Server duplicati rilevati',
     'duplicate_servers_message' => 'I seguenti server sono assegnati a più cartelle: :servers',
+    'duplicate_folder_names' => 'Nomi di cartella duplicati',
+    'duplicate_folder_names_message' => 'Ogni cartella deve avere un nome univoco. Usato più di una volta: :folders',
+    'default_folders_order_help' => 'Le cartelle dell\'amministratore mantengono sempre l\'ordine dell\'amministratore. Le tue cartelle possono essere spostate ovunque tra di esse.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Erreur lors de l\'enregistrement des dossiers par défaut',
     'duplicate_servers' => 'Serveurs en double détectés',
     'duplicate_servers_message' => 'Les serveurs suivants sont attribués à plusieurs dossiers : :servers',
+    'duplicate_folder_names' => 'Noms de dossiers en double',
+    'duplicate_folder_names_message' => 'Chaque dossier doit avoir un nom unique. Utilisé plusieurs fois : :folders',
+    'default_folders_order_help' => 'Les dossiers de l\'administrateur gardent toujours l\'ordre défini par l\'administrateur. Vos propres dossiers peuvent être placés n\'importe où entre eux.',
 ];

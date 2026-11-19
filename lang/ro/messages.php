@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Eroare la salvarea folderelor implicite',
     'duplicate_servers' => 'Servere duplicate detectate',
     'duplicate_servers_message' => 'Următoarele servere sunt alocate mai multor foldere: :servers',
+    'duplicate_folder_names' => 'Nume de foldere duplicate',
+    'duplicate_folder_names_message' => 'Fiecare folder are nevoie de un nume unic. Folosit de mai multe ori: :folders',
+    'default_folders_order_help' => 'Folderele administratorului păstrează întotdeauna ordinea administratorului. Folderele proprii pot fi mutate oriunde între ele.',
 ];

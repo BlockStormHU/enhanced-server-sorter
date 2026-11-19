@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Fel vid sparande av standardmappar',
     'duplicate_servers' => 'Dubbletter av servrar upptäckta',
     'duplicate_servers_message' => 'Följande servrar är tilldelade till flera mappar: :servers',
+    'duplicate_folder_names' => 'Dubblerade mappnamn',
+    'duplicate_folder_names_message' => 'Varje mapp behöver ett unikt namn. Används mer än en gång: :folders',
+    'default_folders_order_help' => 'Administratörens mappar behåller alltid administratörens ordning. Dina egna mappar kan flyttas var som helst mellan dem.',
 ];

@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Feil ved lagring av standardmapper',
     'duplicate_servers' => 'Dupliserte servere oppdaget',
     'duplicate_servers_message' => 'Følgende servere er tildelt flere mapper: :servers',
+    'duplicate_folder_names' => 'Dupliserte mappenavn',
+    'duplicate_folder_names_message' => 'Hver mappe må ha et unikt navn. Brukt mer enn én gang: :folders',
+    'default_folders_order_help' => 'Administratorens mapper beholder alltid administratorens rekkefølge. Dine egne mapper kan flyttes hvor som helst mellom dem.',
 ];

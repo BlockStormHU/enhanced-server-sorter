@@ -28,4 +28,7 @@ return [
     'error_saving' => 'Error saving default folders',
     'duplicate_servers' => 'Duplicate servers detected',
     'duplicate_servers_message' => 'The following servers are assigned to multiple folders: :servers',
+    'duplicate_folder_names' => 'Duplicate folder names',
+    'duplicate_folder_names_message' => 'Each folder needs a unique name. Used more than once: :folders',
+    'default_folders_order_help' => 'Folders from the administrator always keep the administrator\'s order. Your own folders can be moved anywhere between them.',
 ];
